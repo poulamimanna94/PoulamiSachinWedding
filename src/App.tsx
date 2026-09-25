@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState, useRef } from 'react'
 import confetti from 'canvas-confetti'
 import { supabase, supabaseConfigured } from './supabase'
 
-type Lang = 'en' | 'hi'
+type Lang = 'en' | 'hi' | 'bn'
 
 type EventItem = {
   date: string
@@ -11,6 +11,8 @@ type EventItem = {
   hiTitle: string
   details: string
   hiDetails: string
+  bnTitle: string
+  bnDetails: string
   calendar: string
   mapUrl?: string
   contact?: {
@@ -27,6 +29,8 @@ const events: EventItem[] = [
     hiTitle: 'हल्दी उत्सव',
     details: 'Phoolchatti Resort • Dress Code: Shades of Sunshine & Haldi Yellow',
     hiDetails: 'फूलचट्टी रिज़ॉर्ट • परिधान: हल्दी पीला',
+    bnTitle: 'গায়ে হলুদ',
+    bnDetails: 'ফুলচট্টি রিসর্ট • পোশাক: রোদ্দুর ও হলুদ রঙের ছোঁয়া',
     calendar: 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=Poulami+%26+Sachin+-+Haldi+Ceremony&dates=20261120T083000Z/20261120T113000Z&details=Haldi+Ceremony+at+Phoolchatti+Resort&location=Phoolchatti+Resort+Rishikesh',
   },
   {
@@ -36,6 +40,8 @@ const events: EventItem[] = [
     hiTitle: 'सगाई, संगीत एवं कॉकटेल',
     details: 'Riverside Lawns, Phoolchatti Resort • Dress Code: Royal Glamour / Indo-Western',
     hiDetails: 'रिवरसाइड लॉन, फूलचट्टी रिज़ॉर्ट • परिधान: रॉयल इंडो-वेस्टर्न',
+    bnTitle: 'বাগদান, সঙ্গীত ও ককটেল',
+    bnDetails: 'রিভারসাইড লন, ফুলচট্টি রিসর্ট • পোশাক: রয়্যাল ইন্দো-ওয়েস্টার্ন',
     calendar: 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=Poulami+%26+Sachin+-+Sangeet+%26+Cocktails&dates=20261120T133000Z/20261120T180000Z&details=Sangeet+and+Cocktails&location=Phoolchatti+Resort+Rishikesh',
   },
   {
@@ -45,6 +51,8 @@ const events: EventItem[] = [
     hiTitle: 'सूर्यास्त वरमाला उत्सव',
     details: 'Ganga Vista Deck • Dress Code: Pastel Festive Elegance',
     hiDetails: 'गंगा विस्टा डेक • परिधान: पेस्टल ट्रेडिशनल',
+    bnTitle: 'সূর্যাস্তে মালাবদল',
+    bnDetails: 'গঙ্গা ভিস্তা ডেক • পোশাক: প্যাস্টেল ট্র্যাডিশনাল',
     calendar: 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=Poulami+%26+Sachin+-+Varmala&dates=20261121T093000Z/20261121T123000Z&details=Sundowner+Varmala&location=Phoolchatti+Resort+Rishikesh',
   },
   {
@@ -54,6 +62,8 @@ const events: EventItem[] = [
     hiTitle: 'शुभ सात फेरे एवं प्रीतिभोज',
     details: 'Main Mandap, Phoolchatti Resort • Auspicious Godhuli Lagna Muhurat',
     hiDetails: 'मुख्य मंडप, फूलचट्टी रिज़ॉर्ट • शुभ गोधूलि वेला मुहूर्त',
+    bnTitle: 'শুভ সাত পাক ও প্রীতিভোজ',
+    bnDetails: 'প্রধান মণ্ডপ, ফুলচট্টি রিসর্ট • শুভ গোধূলি লগ্ন',
     calendar: 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=Poulami+%26+Sachin+-+Saat+Phere&dates=20261121T133000Z/20261121T183000Z&details=Saat+Phere+and+Gala+Dinner&location=Phoolchatti+Resort+Rishikesh',
   },
   {
@@ -63,6 +73,8 @@ const events: EventItem[] = [
     hiTitle: 'स्वागत समारोह',
     details: 'Community Hall 2 & 3, Genexx Valley Complex, Joka, Kolkata - 700104 • Opposite Joka ESIC Hospital & Medical College • Contact: 9434642106',
     hiDetails: 'कम्युनिटी हॉल 2 एवं 3, जेनेक्स वैली कॉम्प्लेक्स, जोका, कोलकाता - 700104 • जोका ESIC अस्पताल एवं मेडिकल कॉलेज के सामने • संपर्क: 9434642106',
+    bnTitle: 'প্রীতিভোজ (রিসেপশন)',
+    bnDetails: 'কমিউনিটি হল 2 ও 3, জেনেক্স ভ্যালি কমপ্লেক্স, জোকা, কলকাতা - 700104 • জোকা ESIC হাসপাতাল ও মেডিক্যাল কলেজের বিপরীতে • যোগাযোগ: 9434642106',
     calendar: 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=Poulami+%26+Sachin+-+Kolkata+Reception&dates=20261127T063000Z/20261127T103000Z&details=Reception+at+Community+Hall+2+%26+3%2C+Genexx+Valley+Complex%2C+Joka%2C+Kolkata+-+700104.+Opposite+Joka+ESIC+Hospital+%26+Medical+College.+Contact%3A+9434642106&location=Community+Hall+2+%26+3%2C+Genexx+Valley+Complex%2C+Joka%2C+Kolkata+-+700104',
     mapUrl: 'https://www.google.com/maps/dir//Genexx+Valley+Banquet+Hall,+TOWER-15,+ESI+HOSPITAL,+Diamond+Harbour+Rd,+Diamond+Park,+Joka,+Kolkata,+West+Bengal+700104/data=!4m6!4m5!1m1!4e2!1m2!1m1!1s0x3a027b00458c1909:0xd86c8bf355dd0f22?sa=X&ved=1t:57443&ictx=111',
     contact: { name: 'Dr. Prabir Kr Manna', phone: '9434642106' },
@@ -101,6 +113,18 @@ const translations = {
     festivities: 'विवाह उत्सव क्रम',
     sacred: 'मांगलिक कार्यक्रम',
     rsvp: 'उपस्थिति',
+  },
+  bn: {
+    invocation: '॥ শ্রী গণেশায় নমঃ ॥',
+    married: 'শুভ পরিণয়ে আবদ্ধ হতে চলেছেন',
+    elders: 'পূজনীয় গুরুজনদের আশীর্বাদে',
+    groom: 'বরপক্ষ',
+    bride: 'কন্যাপক্ষ',
+    invite: 'এই শুভ বিবাহ অনুষ্ঠানে আপনাকে সাদর আমন্ত্রণ জানাই।',
+    countdown: 'শুভ লগ্নের ক্ষণগণনা',
+    festivities: 'বিবাহ উৎসবের অনুষ্ঠানসূচি',
+    sacred: 'মাঙ্গলিক অনুষ্ঠান',
+    rsvp: 'উপস্থিতি',
   },
 }
 
@@ -271,7 +295,12 @@ function App() {
     }
   }, [])
 
-  const toggleLanguage = () => setLang((value) => (value === 'en' ? 'hi' : 'en'))
+  // Pick the text for the current language: English, Hindi or Bengali.
+  const tr = (en: string, hi: string, bn: string) => (lang === 'hi' ? hi : lang === 'bn' ? bn : en)
+
+  useEffect(() => {
+    document.documentElement.lang = lang
+  }, [lang])
 
   const compressImageForUpload = async (file: File, maxWidth = 1600, targetQuality = 0.75): Promise<File> => {
     if (!file.type.startsWith('image/')) return file
@@ -703,10 +732,10 @@ function App() {
   }
 
   const labels = useMemo(() => ({
-    days: lang === 'en' ? 'Days' : 'दिन',
-    hours: lang === 'en' ? 'Hours' : 'घंटे',
-    mins: lang === 'en' ? 'Mins' : 'मिनट',
-    secs: lang === 'en' ? 'Secs' : 'सेकंड',
+    days: tr('Days', 'दिन', 'দিন'),
+    hours: tr('Hours', 'घंटे', 'ঘণ্টা'),
+    mins: tr('Mins', 'मिनट', 'মিনিট'),
+    secs: tr('Secs', 'सेकंड', 'সেকেন্ড'),
   }), [lang])
 
   return (
@@ -726,7 +755,7 @@ function App() {
           <div className="brand">
             <span className="gold-text">P & S</span>
             <span className="divider">|</span>
-            <span className="nav-subtitle">{lang === 'en' ? 'Vivah Nimantran' : 'शुभ विवाह निमंत्रण'}</span>
+            <span className="nav-subtitle">{tr('Vivah Nimantran', 'शुभ विवाह निमंत्रण', 'শুভ বিবাহের নিমন্ত্রণ')}</span>
           </div>
           <div className="nav-actions">
             <form className="youtube-search-form" onSubmit={searchYoutube}>
@@ -736,8 +765,9 @@ function App() {
                 placeholder="Song name"
                 aria-label="Search YouTube by song name"
               />
-              <button type="submit" className="pill outline" disabled={youtubeSearching}>
-                {youtubeSearching ? 'Searching...' : 'Click to play Song'}
+              <button type="submit" className="pill outline" disabled={youtubeSearching} aria-label="Search and play song">
+                <i className={`fas ${youtubeSearching ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'}`} />
+                <span>{youtubeSearching ? 'Searching...' : 'Click to play Song'}</span>
               </button>
             </form>
             <button
@@ -751,10 +781,14 @@ function App() {
                 : playing ? 'Pause Song' : 'Play Song'}</span>
             </button>
 
-            <button type="button" className="pill gold-btn" onClick={toggleLanguage}>
+            <label className="pill gold-btn lang-select">
               <i className="fas fa-language" />
-              <span>{lang === 'en' ? 'हिन्दी' : 'English'}</span>
-            </button>
+              <select value={lang} onChange={(e) => setLang(e.target.value as Lang)} aria-label="Choose language">
+                <option value="en">English</option>
+                <option value="hi">हिन्दी</option>
+                <option value="bn">বাংলা</option>
+              </select>
+            </label>
 
             {youtubeError && <span className="audio-error">{youtubeError}</span>}
 
@@ -767,13 +801,13 @@ function App() {
         <div className="entry-gate" role="dialog" aria-label="Open wedding invitation">
           <div className="entry-gate-card">
             <div className="om">ॐ</div>
-            <p className="gold-kicker">{lang === 'en' ? 'You are cordially invited' : 'आप सादर आमंत्रित हैं'}</p>
+            <p className="gold-kicker">{tr('You are cordially invited', 'आप सादर आमंत्रित हैं', 'আপনাকে সাদর আমন্ত্রণ')}</p>
             <h1 className="display gold-gradient-text">Poulami & Sachin</h1>
             <button type="button" className="pill gold-btn entry-gate-button" onClick={openInvitation}>
               <i className="fas fa-envelope-open-text" />
-              <span>{lang === 'en' ? 'Open Invitation' : 'निमंत्रण खोलें'}</span>
+              <span>{tr('Open Invitation', 'निमंत्रण खोलें', 'নিমন্ত্রণপত্র খুলুন')}</span>
             </button>
-            <p className="entry-gate-hint"><i className="fas fa-music" /> {lang === 'en' ? 'Best with sound on' : 'ध्वनि चालू रखें'}</p>
+            <p className="entry-gate-hint"><i className="fas fa-music" /> {tr('Best with sound on', 'ध्वनि चालू रखें', 'সাউন্ড চালু রাখুন')}</p>
           </div>
         </div>
       )}
@@ -884,7 +918,7 @@ function App() {
             <img src="/images/taj-couple-1.jpeg" alt="Poulami and Sachin at the Taj Mahal" loading="lazy" />
             <div>
               <span className="gold-kicker">Together, Always</span>
-              <p>{lang === 'en' ? 'A little glimpse of the journey that brought two hearts together.' : 'दो दिलों को साथ लाने वाली खूबसूरत यात्रा की एक झलक।'}</p>
+              <p>{tr('A little glimpse of the journey that brought two hearts together.', 'दो दिलों को साथ लाने वाली खूबसूरत यात्रा की एक झलक।', 'দুটি হৃদয়কে কাছে আনা সুন্দর যাত্রার এক ঝলক।')}</p>
             </div>
           </div>
         </section>
@@ -903,8 +937,8 @@ function App() {
                     <span className="date-badge">{event.date}</span>
                     <span>{event.city}</span>
                   </div>
-                  <h3>{lang === 'en' ? event.title : event.hiTitle}</h3>
-                  <p className="animated-address">{lang === 'en' ? event.details : event.hiDetails}</p>
+                  <h3>{tr(event.title, event.hiTitle, event.bnTitle)}</h3>
+                  <p className="animated-address">{tr(event.details, event.hiDetails, event.bnDetails)}</p>
                   {event.contact && (
                     <div className="event-contact-actions">
                       <strong>{event.contact.name}</strong>
@@ -925,12 +959,12 @@ function App() {
                 <div className="event-actions">
                   <a className="calendar-btn" href={event.calendar} target="_blank" rel="noreferrer">
                     <i className="far fa-calendar-plus" />
-                    <span>{lang === 'en' ? 'Add to Calendar' : 'कैलेंडर में जोड़ें'}</span>
+                    <span>{tr('Add to Calendar', 'कैलेंडर में जोड़ें', 'ক্যালেন্ডারে যোগ করুন')}</span>
                   </a>
                   {event.mapUrl && (
                     <a className="calendar-btn directions-btn" href={event.mapUrl} target="_blank" rel="noreferrer">
                       <i className="fas fa-directions" />
-                      <span>{lang === 'en' ? 'Get Directions' : 'दिशा देखें'}</span>
+                      <span>{tr('Get Directions', 'दिशा देखें', 'পথনির্দেশ দেখুন')}</span>
                     </a>
                   )}
                 </div>
@@ -944,7 +978,7 @@ function App() {
             <img src="/images/taj-couple-2.jpeg" alt="Poulami and Sachin together at the Taj Mahal" loading="lazy" />
             <div>
               <span className="gold-kicker">Moments Worth Remembering</span>
-              <p>{lang === 'en' ? 'From everyday smiles to unforgettable celebrations.' : 'रोज़मर्रा की मुस्कानों से लेकर यादगार जश्न तक।'}</p>
+              <p>{tr('From everyday smiles to unforgettable celebrations.', 'रोज़मर्रा की मुस्कानों से लेकर यादगार जश्न तक।', 'রোজকার হাসি থেকে অবিস্মরণীয় উদযাপন পর্যন্ত।')}</p>
             </div>
           </div>
         </section>
@@ -954,14 +988,14 @@ function App() {
             <div className="panel">
               <div className="panel-heading">
                 <div>
-                  <h3>{lang === 'en' ? 'Sangeet DJ Request Box' : 'संगीत डीजे गाना अनुरोध'}</h3>
-                  <p>{lang === 'en' ? 'Nominate & upvote songs for the dance night!' : 'संगीत की रात के लिए अपना पसंदीदा गाना जोड़ें!'}</p>
+                  <h3>{tr('Sangeet DJ Request Box', 'संगीत डीजे गाना अनुरोध', 'সঙ্গীত সন্ধ্যার গানের অনুরোধ')}</h3>
+                  <p>{tr('Nominate & upvote songs for the dance night!', 'संगीत की रात के लिए अपना पसंदीदा गाना जोड़ें!', 'নাচের রাতের জন্য আপনার প্রিয় গান যোগ করুন ও ভোট দিন!')}</p>
                 </div>
                 <i className="fas fa-compact-disc" />
               </div>
               <form className="song-form" onSubmit={addSong}>
                 <input value={song} onChange={(e) => setSong(e.target.value)} placeholder="Track name & artist..." />
-                <button className="gold-btn" type="submit">{lang === 'en' ? 'Add' : 'जोड़ें'}</button>
+                <button className="gold-btn" type="submit">{tr('Add', 'जोड़ें', 'যোগ করুন')}</button>
               </form>
               <div className="playlist">
                 {songs.map((item, index) => (
@@ -976,8 +1010,8 @@ function App() {
             <div className="panel">
               <div className="panel-heading">
                 <div>
-                  <h3>{lang === 'en' ? 'How Well Do You Know Them?' : 'आप इन्हें कितना जानते हैं?'}</h3>
-                  <p>{lang === 'en' ? 'Take the 5-question couple trivia quiz!' : 'सचिन और पौलमी से जुड़ी इस छोटी सी क्विज़ को हल करें!'}</p>
+                  <h3>{tr('How Well Do You Know Them?', 'आप इन्हें कितना जानते हैं?', 'আপনি ওদের কতটা চেনেন?')}</h3>
+                  <p>{tr('Take the 5-question couple trivia quiz!', 'सचिन और पौलमी से जुड़ी इस छोटी सी क्विज़ को हल करें!', 'সচিন ও পৌলমীকে নিয়ে ৫টি প্রশ্নের ছোট্ট কুইজে অংশ নিন!')}</p>
                 </div>
                 <i className="fas fa-heart" />
               </div>
@@ -1013,34 +1047,32 @@ function App() {
             <img src="/images/taj-couple-3.jpeg" alt="Poulami and Sachin sharing a romantic moment" loading="lazy" />
             <div>
               <span className="gold-kicker">The Beginning of Forever</span>
-              <p>{lang === 'en' ? 'One beautiful chapter, leading to a lifetime together.' : 'एक खूबसूरत अध्याय, जो जीवनभर के साथ की ओर बढ़ रहा है।'}</p>
+              <p>{tr('One beautiful chapter, leading to a lifetime together.', 'एक खूबसूरत अध्याय, जो जीवनभर के साथ की ओर बढ़ रहा है।', 'একটি সুন্দর অধ্যায়, যা এগিয়ে চলেছে সারাজীবনের একসাথে পথচলার দিকে।')}</p>
             </div>
           </div>
         </section>
 
         <section className="section container two-col venue-photo">
           <div className="panel">
-            <span className="gold-kicker">{lang === 'en' ? 'Wedding Destination' : 'विवाह स्थल'}</span>
+            <span className="gold-kicker">{tr('Wedding Destination', 'विवाह स्थल', 'বিবাহের স্থান')}</span>
             <h3>Phoolchatti Resort, Rishikesh</h3>
             <p className="animated-address">Rattapani, Neelkanth Temple Road, Rishikesh, Paliyal Gaon, Uttarakhand 249304</p>
             <a className="gold-btn action-btn" href="https://www.google.com/maps/search/?api=1&query=Phoolchatti+resort+Rattapani+Neelkanth+Temple+Rd+Rishikesh" target="_blank" rel="noreferrer">
-              <i className="fas fa-directions" /> {lang === 'en' ? 'Open in Google Maps' : 'गूगल मैप्स में देखें'}
+              <i className="fas fa-directions" /> {tr('Open in Google Maps', 'गूगल मैप्स में देखें', 'গুগল ম্যাপে দেখুন')}
             </a>
           </div>
 
           <div className="panel photo-drop">
             <div className="panel-heading">
               <div>
-                <span className="gold-kicker">{lang === 'en' ? 'Our Memories' : 'हमारी यादें'}</span>
-                <h3>{lang === 'en' ? 'A Little Love Story' : 'एक प्यारी सी प्रेम कहानी'}</h3>
+                <span className="gold-kicker">{tr('Our Memories', 'हमारी यादें', 'আমাদের স্মৃতি')}</span>
+                <h3>{tr('A Little Love Story', 'एक प्यारी सी प्रेम कहानी', 'একটি ছোট্ট ভালোবাসার গল্প')}</h3>
               </div>
               <i className="fas fa-camera-retro" />
             </div>
 
             <p className="memory-copy">
-              {lang === 'en'
-                ? 'See memories shared by everyone attending the wedding.'
-                : 'शादी में शामिल सभी मेहमानों द्वारा साझा की गई यादें देखें।'}
+              {tr('See memories shared by everyone attending the wedding.', 'शादी में शामिल सभी मेहमानों द्वारा साझा की गई यादें देखें।', 'বিয়েতে আসা সকল অতিথির ভাগ করে নেওয়া স্মৃতিগুলি দেখুন।')}
             </p>
 
             <div className="memory-gallery shared-memory-gallery">
@@ -1078,8 +1110,8 @@ function App() {
             <label className={`upload-btn ${photoUploading ? 'disabled' : ''}`}>
               <i className={`fas ${photoUploading ? 'fa-spinner fa-spin' : 'fa-upload'}`} />
               {photoUploading
-                ? (lang === 'en' ? 'Sharing...' : 'साझा हो रहा है...')
-                : (lang === 'en' ? 'Add Your Photo' : 'अपनी फोटो जोड़ें')}
+                ? (tr('Sharing...', 'साझा हो रहा है...', 'শেয়ার হচ্ছে...'))
+                : (tr('Add Your Photo', 'अपनी फोटो जोड़ें', 'আপনার ছবি যোগ করুন'))}
               <input
                 type="file"
                 accept="image/*"
@@ -1093,9 +1125,7 @@ function App() {
             </label>
 
             <span className="upload-status">
-              <i className="fas fa-users" /> {lang === 'en'
-                ? 'Shared with wedding guests. You can delete your own photo anytime.'
-                : 'सभी मेहमानों के साथ साझा। अपनी फोटो कभी भी हटा सकते हैं।'}
+              <i className="fas fa-users" /> {tr('Shared with wedding guests. You can delete your own photo anytime.', 'सभी मेहमानों के साथ साझा। अपनी फोटो कभी भी हटा सकते हैं।', 'বিয়ের সকল অতিথির সঙ্গে শেয়ার করা হয়। নিজের ছবি যেকোনো সময় মুছে ফেলতে পারেন।')}
             </span>
 
             {photoMessage && <span className="upload-status photo-message">{photoMessage}</span>}
@@ -1106,7 +1136,7 @@ function App() {
             <img src="/images/taj-couple-4.jpeg" alt="Poulami and Sachin celebrating their journey" loading="lazy" />
             <div>
               <span className="gold-kicker">And The Story Continues...</span>
-              <p>{lang === 'en' ? 'The best part of the story is still being written.' : 'कहानी का सबसे खूबसूरत हिस्सा अभी लिखा जाना बाकी है।'}</p>
+              <p>{tr('The best part of the story is still being written.', 'कहानी का सबसे खूबसूरत हिस्सा अभी लिखा जाना बाकी है।', 'গল্পের সবচেয়ে সুন্দর অংশটা এখনও লেখা বাকি।')}</p>
             </div>
           </div>
         </section>
@@ -1114,14 +1144,14 @@ function App() {
         <section className="rsvp-section" id="rsvp">
           <div className="container rsvp-container">
             <div className="section-heading">
-              <span className="gold-kicker">{lang === 'en' ? 'Bless Us With Your Presence' : 'आपकी उपस्थिति प्रार्थनीय है'}</span>
-              <h2 className="gold-gradient-text">{lang === 'en' ? 'Wedding RSVP & Desk' : 'उपस्थिति सूचना एवं संपर्क'}</h2>
-              <p>{lang === 'en' ? 'Kindly confirm your presence by 15th October 2026' : 'कृपया 15 अक्टूबर 2026 तक अपनी उपस्थिति सुनिश्चित करें'}</p>
+              <span className="gold-kicker">{tr('Bless Us With Your Presence', 'आपकी उपस्थिति प्रार्थनीय है', 'আপনার উপস্থিতি আমাদের একান্ত কাম্য')}</span>
+              <h2 className="gold-gradient-text">{tr('Wedding RSVP & Desk', 'उपस्थिति सूचना एवं संपर्क', 'উপস্থিতি নিশ্চিতকরণ ও যোগাযোগ')}</h2>
+              <p>{tr('Kindly confirm your presence by 15th October 2026', 'कृपया 15 अक्टूबर 2026 तक अपनी उपस्थिति सुनिश्चित करें', 'অনুগ্রহ করে ১৫ অক্টোবর ২০২৬-এর মধ্যে আপনার উপস্থিতি নিশ্চিত করুন')}</p>
             </div>
 
             <div className="coordinator card animated-contact">
               <div className="contact-details">
-                <span className="mini-label">{lang === 'en' ? 'Wedding Coordinator Desk' : 'विवाह व्यवस्थापक'}</span>
+                <span className="mini-label">{tr('Wedding Coordinator Desk', 'विवाह व्यवस्थापक', 'বিবাহ সমন্বয়ক')}</span>
                 <strong>Poulami</strong>
                 <a href="tel:+919647000546">+91 9647000546</a>
               </div>
@@ -1160,7 +1190,7 @@ function App() {
                 <textarea name="blessings" rows={3} placeholder="Write your heartfelt blessings here..." />
               </label>
               <button type="submit" className="submit-btn">
-                {lang === 'en' ? 'Confirm Attendance & Send Blessings' : 'उपस्थिति दर्ज करें एवं आशीर्वाद भेजें'}
+                {tr('Confirm Attendance & Send Blessings', 'उपस्थिति दर्ज करें एवं आशीर्वाद भेजें', 'উপস্থিতি নিশ্চিত করুন ও আশীর্বাদ পাঠান')}
               </button>
               {rsvpMessage && <span className="upload-status photo-message">{rsvpMessage}</span>}
             </form>
