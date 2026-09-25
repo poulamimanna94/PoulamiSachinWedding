@@ -108,6 +108,7 @@ function App() {
   const defaultYoutubeVideoId = 'MbLpZXIZZOg'
   const defaultMusicSource = '/music/default-song.m4a'
   const defaultAudioRef = useRef<HTMLAudioElement | null>(null)
+  const youtubeFrameRef = useRef<HTMLIFrameElement | null>(null)
   const [lang, setLang] = useState<Lang>('en')
   const [playing, setPlaying] = useState(true)
   const [showEntryGate, setShowEntryGate] = useState(true)
@@ -176,6 +177,32 @@ function App() {
     } else {
       audio.pause()
     }
+  }, [isDefaultYoutubeSong, playing])
+
+  // Pause the music while the guest is on another tab or app, and resume it
+  // when they come back (only if it was playing before they left).
+  useEffect(() => {
+    const sendYoutubeCommand = (func: 'pauseVideo' | 'playVideo') => {
+      youtubeFrameRef.current?.contentWindow?.postMessage(
+        JSON.stringify({ event: 'command', func, args: [] }),
+        'https://www.youtube.com',
+      )
+    }
+
+    const handleVisibilityChange = () => {
+      if (!playing) return
+      const audio = defaultAudioRef.current
+      if (document.hidden) {
+        if (isDefaultYoutubeSong) audio?.pause()
+        else sendYoutubeCommand('pauseVideo')
+      } else {
+        if (isDefaultYoutubeSong) audio?.play().catch(() => setPlaying(false))
+        else sendYoutubeCommand('playVideo')
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [isDefaultYoutubeSong, playing])
 
   const openInvitation = () => {
@@ -783,7 +810,8 @@ function App() {
             </div>
           )}
           <iframe
-            src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=${playing ? 1 : 0}&rel=0&playsinline=1`}
+            ref={youtubeFrameRef}
+            src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=${playing ? 1 : 0}&rel=0&playsinline=1&enablejsapi=1`}
             title="YouTube wedding song"
             allow="autoplay; encrypted-media; picture-in-picture"
             allowFullScreen
