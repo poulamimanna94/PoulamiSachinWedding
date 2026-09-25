@@ -110,7 +110,7 @@ function App() {
   const defaultAudioRef = useRef<HTMLAudioElement | null>(null)
   const [lang, setLang] = useState<Lang>('en')
   const [playing, setPlaying] = useState(true)
-  const [isMuted, setIsMuted] = useState(false)
+  const [showEntryGate, setShowEntryGate] = useState(true)
   const [youtubeVideoId, setYoutubeVideoId] = useState(defaultYoutubeVideoId)
   const [isDefaultYoutubeSong, setIsDefaultYoutubeSong] = useState(true)
   const [youtubePlayerOpen, setYoutubePlayerOpen] = useState(true)
@@ -163,34 +163,29 @@ function App() {
     return () => window.clearInterval(timer)
   }, [])
 
+  // Browsers block sound until the guest interacts with the page, so this
+  // tries to autoplay first and keeps the "Open Invitation" screen up if blocked.
   useEffect(() => {
     const audio = defaultAudioRef.current
-    if (!audio || !isDefaultYoutubeSong) return
-
-    const unlockDefaultAudio = () => {
+    if (!audio) return
+    if (isDefaultYoutubeSong && playing) {
       audio.volume = 1
-      audio.muted = false
-      audio.loop = true
-      audio.play().catch(() => {
-        // First click is required to unlock audio playback in the browser.
-      })
-      setPlaying(true)
+      audio.play()
+        .then(() => setShowEntryGate(false))
+        .catch(() => setPlaying(false))
+    } else {
+      audio.pause()
     }
+  }, [isDefaultYoutubeSong, playing])
 
-    audio.volume = 1
-    audio.muted = false
-    audio.loop = true
-
-    window.addEventListener('pointerdown', unlockDefaultAudio, { once: true })
-    window.addEventListener('touchstart', unlockDefaultAudio, { once: true })
-    window.addEventListener('keydown', unlockDefaultAudio, { once: true })
-
-    return () => {
-      window.removeEventListener('pointerdown', unlockDefaultAudio)
-      window.removeEventListener('touchstart', unlockDefaultAudio)
-      window.removeEventListener('keydown', unlockDefaultAudio)
-    }
-  }, [isDefaultYoutubeSong])
+  const openInvitation = () => {
+    const audio = defaultAudioRef.current
+    // play() must run directly inside the tap handler for the browser to allow sound.
+    audio?.play()
+      .then(() => setPlaying(true))
+      .catch(() => setPlaying(false))
+    setShowEntryGate(false)
+  }
 
   useEffect(() => {
     const canvas = document.getElementById('petal-canvas') as HTMLCanvasElement | null
@@ -351,7 +346,6 @@ function App() {
       setIsDefaultYoutubeSong(false)
       setYoutubePlayerOpen(true)
       setYoutubePlayerMinimized(false)
-      setIsMuted(false)
       setPlaying(true)
     } catch (error) {
       console.error('YouTube search failed:', error)
@@ -369,14 +363,6 @@ function App() {
       return
     }
 
-    // The default Ullam Padum song starts muted so the browser allows autoplay.
-    // The first click keeps it playing and only turns the sound on.
-    if (isDefaultYoutubeSong && playing && isMuted) {
-      setIsMuted(false)
-      return
-    }
-
-    setIsMuted(false)
     setPlaying((value) => !value)
   }
 
@@ -733,7 +719,9 @@ function App() {
               onClick={toggleMusic}
             >
               <i className={`fas ${playing ? 'fa-pause' : 'fa-play'}`} />
-              <span>{isDefaultYoutubeSong ? '🔊 Play Ullam Padum' : playing ? 'Pause Song' : 'Play Song'}</span>
+              <span>{isDefaultYoutubeSong
+                ? playing ? 'Pause Ullam Padum' : '🔊 Play Ullam Padum'
+                : playing ? 'Pause Song' : 'Play Song'}</span>
             </button>
 
             <button type="button" className="pill gold-btn" onClick={toggleLanguage}>
@@ -748,13 +736,24 @@ function App() {
         </div>
       </header>
 
-      {youtubeVideoId && youtubePlayerOpen && (
+      {showEntryGate && (
+        <div className="entry-gate" role="dialog" aria-label="Open wedding invitation">
+          <div className="entry-gate-card">
+            <div className="om">ॐ</div>
+            <p className="gold-kicker">{lang === 'en' ? 'You are cordially invited' : 'आप सादर आमंत्रित हैं'}</p>
+            <h1 className="display gold-gradient-text">Poulami & Sachin</h1>
+            <button type="button" className="pill gold-btn entry-gate-button" onClick={openInvitation}>
+              <i className="fas fa-envelope-open-text" />
+              <span>{lang === 'en' ? 'Open Invitation' : 'निमंत्रण खोलें'}</span>
+            </button>
+            <p className="entry-gate-hint"><i className="fas fa-music" /> {lang === 'en' ? 'Best with sound on' : 'ध्वनि चालू रखें'}</p>
+          </div>
+        </div>
+      )}
+
+      {youtubeVideoId && youtubePlayerOpen && !isDefaultYoutubeSong && (
         <div
-          className={
-            isDefaultYoutubeSong
-              ? 'youtube-player youtube-player-default-hidden'
-              : `youtube-player ${youtubePlayerMinimized ? 'youtube-player-minimized' : ''}`
-          }
+          className={`youtube-player ${youtubePlayerMinimized ? 'youtube-player-minimized' : ''}`}
           aria-label="YouTube music player"
         >
           {!isDefaultYoutubeSong && (
@@ -774,6 +773,7 @@ function App() {
                   setPlaying(false)
                   setYoutubePlayerOpen(false)
                   setIsDefaultYoutubeSong(true)
+                  setYoutubeVideoId(defaultYoutubeVideoId)
                 }}
                 aria-label="Close YouTube player"
                 title="Close"
@@ -783,7 +783,7 @@ function App() {
             </div>
           )}
           <iframe
-            src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=${playing ? 1 : 0}&mute=${isMuted ? 1 : 0}&rel=0&playsinline=1`}
+            src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=${playing ? 1 : 0}&rel=0&playsinline=1`}
             title="YouTube wedding song"
             allow="autoplay; encrypted-media; picture-in-picture"
             allowFullScreen
