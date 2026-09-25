@@ -568,28 +568,41 @@ footer small { color: rgba(247,243,233,.35); font-size: 9px; }
 .entry-gate-hint { margin: 18px 0 0; color: var(--muted); font-size: 12px; letter-spacing: .08em; }
 
 /* Language picker: English / हिन्दी / বাংলা */
-.lang-select { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; }
-.lang-select select {
-  appearance: none;
-  -webkit-appearance: none;
-  width: auto;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  line-height: 1.2;
-  background: transparent;
-  color: inherit;
-  font-weight: 700;
-  font-size: inherit;
-  cursor: pointer;
-  outline: none;
+.lang-select { position: relative; flex-shrink: 0; }
+.lang-select-button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.lang-select-button .lang-select-current { display: inline; }
+.lang-select-chevron { font-size: 9px; }
+.lang-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 70;
+  min-width: 130px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--deep);
+  box-shadow: 0 12px 30px rgba(0,0,0,.45);
 }
-.lang-select select option { background: var(--cream); color: var(--deep); }
-.lang-select:focus-within { box-shadow: 0 0 0 2px var(--gold-light); }
+.lang-select-menu button {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--gold-light);
+  font-size: 13px;
+  text-align: left;
+}
+.lang-select-menu button:hover { background: rgba(212,175,55,.12); }
+.lang-select-menu button.active { background: var(--gold); color: var(--deep); font-weight: 700; }
 
 /* Letter spacing breaks up Bengali conjunct letters, so turn it off for Bengali. */
 html:lang(bn) body * { letter-spacing: normal !important; }
 
 @media (max-width: 760px) {
-  .lang-select i { display: none; }
+  .lang-select-button .fa-language { display: none; }
 }

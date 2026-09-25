@@ -89,6 +89,8 @@ const trivia = [
   { q: 'Their ultimate comfort food together is:', options: ['Ghar ki Dal Khichdi', 'Woodfired Pizza', 'Puchka / Golgappe'], ans: 2 },
 ]
 
+const languageNames: Record<Lang, string> = { en: 'English', hi: 'हिन्दी', bn: 'বাংলা' }
+
 const translations = {
   en: {
     invocation: '॥ SHRI GANESHAYA NAMAHA ॥',
@@ -134,6 +136,8 @@ function App() {
   const defaultAudioRef = useRef<HTMLAudioElement | null>(null)
   const youtubeFrameRef = useRef<HTMLIFrameElement | null>(null)
   const [lang, setLang] = useState<Lang>('en')
+  const [langMenuOpen, setLangMenuOpen] = useState(false)
+  const langMenuRef = useRef<HTMLDivElement | null>(null)
   const [playing, setPlaying] = useState(true)
   const [showEntryGate, setShowEntryGate] = useState(true)
   const [youtubeVideoId, setYoutubeVideoId] = useState(defaultYoutubeVideoId)
@@ -301,6 +305,16 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = lang
   }, [lang])
+
+  // Close the language menu when tapping anywhere outside it.
+  useEffect(() => {
+    if (!langMenuOpen) return
+    const closeOnOutsideTap = (event: PointerEvent) => {
+      if (!langMenuRef.current?.contains(event.target as Node)) setLangMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOnOutsideTap)
+    return () => document.removeEventListener('pointerdown', closeOnOutsideTap)
+  }, [langMenuOpen])
 
   const compressImageForUpload = async (file: File, maxWidth = 1600, targetQuality = 0.75): Promise<File> => {
     if (!file.type.startsWith('image/')) return file
@@ -781,14 +795,40 @@ function App() {
                 : playing ? 'Pause Song' : 'Play Song'}</span>
             </button>
 
-            <label className="pill gold-btn lang-select">
-              <i className="fas fa-language" />
-              <select value={lang} onChange={(e) => setLang(e.target.value as Lang)} aria-label="Choose language">
-                <option value="en">English</option>
-                <option value="hi">हिन्दी</option>
-                <option value="bn">বাংলা</option>
-              </select>
-            </label>
+            <div className="lang-select" ref={langMenuRef}>
+              <button
+                type="button"
+                className="pill gold-btn lang-select-button"
+                onClick={() => setLangMenuOpen((open) => !open)}
+                aria-haspopup="listbox"
+                aria-expanded={langMenuOpen}
+                aria-label="Choose language"
+              >
+                <i className="fas fa-language" />
+                <span className="lang-select-current">{languageNames[lang]}</span>
+                <i className="fas fa-chevron-down lang-select-chevron" />
+              </button>
+              {langMenuOpen && (
+                <ul className="lang-select-menu" role="listbox" aria-label="Languages">
+                  {(Object.keys(languageNames) as Lang[]).map((code) => (
+                    <li key={code}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={lang === code}
+                        className={lang === code ? 'active' : ''}
+                        onClick={() => {
+                          setLang(code)
+                          setLangMenuOpen(false)
+                        }}
+                      >
+                        {languageNames[code]}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             {youtubeError && <span className="audio-error">{youtubeError}</span>}
 
