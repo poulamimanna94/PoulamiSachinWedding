@@ -175,6 +175,10 @@ function App() {
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoMessage, setPhotoMessage] = useState('')
   const [myPhotosOpen, setMyPhotosOpen] = useState(false)
+  const photoSetupMissingMessage =
+    'Photo sharing is not set up on this site yet: the Supabase URL and key are missing from the site settings.'
+  const photoNotReadyMessage = (reason: string) =>
+    `Photo sharing is not ready: ${reason}. (Check that Anonymous Sign-Ins is enabled in Supabase.)`
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   const t = translations[lang]
@@ -489,9 +493,24 @@ function App() {
     setSharedPhotos((data ?? []) as SharedPhoto[])
   }
 
+  // Signs the guest in anonymously (or reuses their saved session) so they can
+  // upload and delete their own photos. Throws with Supabase's own message.
+  const ensureGuestSession = async () => {
+    if (!supabase) throw new Error(photoSetupMissingMessage)
+
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
+    if (session?.user?.id) return session.user.id
+
+    const { data, error } = await supabase.auth.signInAnonymously()
+    if (error) throw error
+    if (!data.user?.id) throw new Error('No guest session was created.')
+    return data.user.id
+  }
+
   useEffect(() => {
     if (!supabase) {
-      setPhotoMessage('Add Supabase settings to enable shared photos.')
+      setPhotoMessage(photoSetupMissingMessage)
       return
     }
 
@@ -501,27 +520,7 @@ function App() {
 
     const initialiseSharedPhotos = async () => {
       try {
-        const {
-          data: { session },
-          error: sessionError,
-        } = await client.auth.getSession()
-
-        if (sessionError) throw sessionError
-
-        let userId = session?.user?.id
-
-        if (!userId) {
-          const { data, error } = await client.auth.signInAnonymously()
-          if (error) throw error
-          const anonymousUserId = data.user?.id ?? null
-          if (anonymousUserId) {
-            userId = anonymousUserId
-          }
-        }
-
-        if (!userId) {
-          throw new Error('No guest session was created.')
-        }
+        const userId = await ensureGuestSession()
 
         if (!mounted) return
 
@@ -543,9 +542,7 @@ function App() {
       } catch (error) {
         console.error('Shared gallery initialization failed:', error)
         const message = error instanceof Error ? error.message : 'Unknown Supabase error.'
-        setPhotoMessage(
-          `Photo sharing is not ready: ${message} Enable Anonymous Sign-Ins and run supabase/schema.sql if needed.`
-        )
+        setPhotoMessage(photoNotReadyMessage(message))
       }
     }
 
@@ -558,8 +555,8 @@ function App() {
   }, [])
 
   // Shrinks and uploads one photo; throws with a readable message on failure.
-  const uploadPhoto = async (file: File) => {
-    if (!supabase || !currentUserId) throw new Error('Photo sharing is still connecting. Please try again in a moment.')
+  const uploadPhoto = async (file: File, guestId: string) => {
+    if (!supabase) throw new Error(photoSetupMissingMessage)
     if (!isImageFile(file)) throw new Error(`"${file.name}" is not an image file.`)
 
     // Phone photos are often over 10 MB; shrink first, then check the size.
@@ -569,7 +566,7 @@ function App() {
     }
     const extension = optimizedFile.name.split('.').pop()?.toLowerCase() || 'jpg'
     const photoId = makePhotoId()
-    const storagePath = `${currentUserId}/${photoId}.${extension}`
+    const storagePath = `${guestId}/${photoId}.${extension}`
 
     const { error: uploadError } = await supabase.storage
       .from('wedding-photos')
@@ -591,7 +588,7 @@ function App() {
         id: photoId,
         storage_path: storagePath,
         public_url: publicUrlData.publicUrl,
-        uploaded_by: currentUserId,
+        uploaded_by: guestId,
       })
 
     if (insertError) {
@@ -605,9 +602,23 @@ function App() {
     const files = Array.from(fileList ?? [])
     if (!files.length) return
 
-    if (!supabase || !currentUserId) {
-      setPhotoMessage('Photo sharing is still connecting. Please try again in a moment.')
+    if (!supabase) {
+      setPhotoMessage(photoSetupMissingMessage)
       return
+    }
+
+    // If the guest session failed when the page loaded, try again now and
+    // show the real reason if it still fails.
+    let guestId = currentUserId
+    if (!guestId) {
+      try {
+        guestId = await ensureGuestSession()
+        setCurrentUserId(guestId)
+      } catch (error) {
+        console.error('Guest sign-in failed:', error)
+        setPhotoMessage(photoNotReadyMessage(error instanceof Error ? error.message : 'Unknown Supabase error.'))
+        return
+      }
     }
 
     setPhotoUploading(true)
@@ -617,7 +628,7 @@ function App() {
     for (const [index, file] of files.entries()) {
       setPhotoMessage(files.length > 1 ? `Uploading photo ${index + 1} of ${files.length}...` : 'Uploading your memory...')
       try {
-        await uploadPhoto(file)
+        await uploadPhoto(file, guestId)
         uploaded += 1
       } catch (error) {
         console.error('Photo upload failed:', error)
